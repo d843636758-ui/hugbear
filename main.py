@@ -16,7 +16,7 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 
 APP_NAME = "Hug Bear Touch"
-BUILD_VERSION = "2026-08-18-hardware-ready-v5"
+BUILD_VERSION = "2026-09-01-calibrated-v6"
 SCHEMA_VERSION = 4
 
 DB_PATH = Path(os.getenv("DATA_DIR", "/data")) / "touch.db"
@@ -27,7 +27,7 @@ LOCAL_TZ = ZoneInfo(LOCAL_TIMEZONE)
 
 TAP_MAX_MS = int(os.getenv("TAP_MAX_MS", "400"))
 HUG_MIN_MS = int(os.getenv("HUG_MIN_MS", "2500"))
-TIGHT_HUG_PEAK = int(os.getenv("TIGHT_HUG_PEAK", "2800"))
+TIGHT_HUG_PEAK = int(os.getenv("TIGHT_HUG_PEAK", "3500"))
 LONG_HUG_MIN_MS = int(os.getenv("LONG_HUG_MIN_MS", str(10 * 60 * 1000)))
 SLEEP_HUG_MIN_MS = int(os.getenv("SLEEP_HUG_MIN_MS", str(30 * 60 * 1000)))
 MAX_EVENT_MS = int(os.getenv("MAX_EVENT_MS", str(24 * 60 * 60 * 1000)))

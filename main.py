@@ -16,7 +16,7 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 
 APP_NAME = "Hug Bear Touch"
-BUILD_VERSION = "2026-09-01-calibrated-v6"
+BUILD_VERSION = "2026-09-02-dashboard-v7"
 SCHEMA_VERSION = 4
 
 DB_PATH = Path(os.getenv("DATA_DIR", "/data")) / "touch.db"
@@ -3623,133 +3623,423 @@ async def dashboard(
     return HTMLResponse(
         f"""
 <!doctype html>
-
 <html lang="zh-CN">
-
 <head>
-
 <meta charset="utf-8">
-
-<meta
-    name="viewport"
-    content="width=device-width,initial-scale=1"
->
-
-<title>
-    抱抱记录
-</title>
-
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fff8f2">
+<title>小熊抱抱记录</title>
 <style>
-
+:root {{
+    color-scheme: light;
+    --ink: #3b2a24;
+    --muted: #8b746a;
+    --cream: #fff8f2;
+    --card: rgba(255,255,255,.92);
+    --peach: #f6b38a;
+    --peach-dark: #d97950;
+    --green: #4f9d77;
+    --line: #eadbd2;
+    --shadow: 0 14px 35px rgba(91,61,47,.10);
+}}
+* {{ box-sizing: border-box; }}
 body {{
-    font-family: system-ui;
-    max-width: 760px;
-    margin: 30px auto;
-    padding: 0 18px;
+    margin: 0;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--ink);
+    background:
+        radial-gradient(circle at 85% 0%, #ffe2cf 0, transparent 34%),
+        linear-gradient(180deg, #fffaf6 0%, #fff4ec 100%);
 }}
-
-input,
-button {{
+main {{
+    width: min(720px, 100%);
+    margin: 0 auto;
+    padding: 28px 18px calc(44px + env(safe-area-inset-bottom));
+}}
+.hero {{
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+}}
+.bear {{
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: var(--shadow);
+    font-size: 34px;
+}}
+h1 {{ margin: 0; font-size: 28px; letter-spacing: -.5px; }}
+.subtitle {{ margin: 3px 0 0; color: var(--muted); font-size: 14px; }}
+.panel {{
+    background: var(--card);
+    border: 1px solid rgba(234,219,210,.85);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    padding: 18px;
+    margin-bottom: 14px;
+}}
+.auth {{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+}}
+input, button {{
+    min-height: 48px;
+    border-radius: 15px;
     font: inherit;
-    padding: 10px;
-    border-radius: 9px;
-    border: 1px solid #bbb;
 }}
-
 input {{
     width: 100%;
-    box-sizing: border-box;
+    border: 1px solid var(--line);
+    padding: 0 15px;
+    color: var(--ink);
+    background: #fff;
+    outline: none;
 }}
-
+input:focus {{ border-color: var(--peach); box-shadow: 0 0 0 3px #f6b38a33; }}
+button {{
+    border: 0;
+    padding: 0 18px;
+    color: #fff;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--peach), var(--peach-dark));
+    box-shadow: 0 8px 18px rgba(217,121,80,.22);
+}}
+button:disabled {{ opacity: .55; }}
+.status-line {{
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 12px;
+}}
+.dot {{ width: 10px; height: 10px; border-radius: 50%; background: #bbb; }}
+.dot.ok {{ background: var(--green); box-shadow: 0 0 0 5px #4f9d7718; }}
+.dot.bad {{ background: #d95f59; }}
+.live {{
+    text-align: center;
+    padding: 24px 16px;
+}}
+.live-icon {{ font-size: 52px; line-height: 1; }}
+.live-title {{ margin: 12px 0 4px; font-size: 25px; }}
+.live-note {{ color: var(--muted); margin: 0; }}
+.pulse {{ animation: pulse 1.3s ease-in-out infinite; }}
+@keyframes pulse {{ 50% {{ transform: scale(1.08); }} }}
+.latest-head {{
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+}}
+.eyebrow {{ color: var(--muted); font-size: 13px; }}
+.latest-title {{ font-size: 23px; font-weight: 800; margin-top: 3px; }}
+.time {{ color: var(--peach-dark); font-weight: 700; font-size: 14px; text-align: right; }}
+.metrics {{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 9px;
+    margin-top: 16px;
+}}
+.metric {{
+    border-radius: 16px;
+    background: var(--cream);
+    padding: 12px 8px;
+    text-align: center;
+}}
+.metric strong {{ display: block; font-size: 20px; }}
+.metric span {{ color: var(--muted); font-size: 12px; }}
+.meter {{ height: 10px; background: #f3e8e1; border-radius: 999px; overflow: hidden; margin-top: 14px; }}
+.meter > i {{
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #f7c8a9, #ee825c);
+    transition: width .5s ease;
+}}
+.section-title {{ margin: 24px 3px 10px; font-size: 18px; }}
+.event {{
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--line);
+}}
+.event:last-child {{ border-bottom: 0; }}
+.event-icon {{
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 15px;
+    background: var(--cream);
+    font-size: 23px;
+}}
+.event-name {{ font-weight: 750; }}
+.event-meta, .event-time {{ color: var(--muted); font-size: 13px; }}
+.event-time {{ text-align: right; }}
+.empty {{ color: var(--muted); text-align: center; padding: 20px 0; }}
+.toast {{
+    position: fixed;
+    z-index: 10;
+    left: 50%;
+    top: calc(18px + env(safe-area-inset-top));
+    transform: translate(-50%, -130%);
+    width: max-content;
+    max-width: calc(100% - 36px);
+    padding: 13px 18px;
+    border-radius: 999px;
+    background: #3f302a;
+    color: #fff;
+    font-weight: 700;
+    box-shadow: var(--shadow);
+    transition: transform .3s ease;
+}}
+.toast.show {{ transform: translate(-50%, 0); }}
+details {{ margin-top: 16px; color: var(--muted); }}
 pre {{
     white-space: pre-wrap;
     word-break: break-word;
-    background: #f4f4f4;
-    padding: 12px;
+    max-height: 320px;
+    overflow: auto;
+    background: #342a26;
+    color: #fcefe7;
+    border-radius: 14px;
+    padding: 13px;
+    font-size: 12px;
 }}
-
+.hidden {{ display: none; }}
+@media (max-width: 390px) {{
+    .auth {{ grid-template-columns: 1fr; }}
+    .metrics {{ gap: 6px; }}
+    .metric strong {{ font-size: 17px; }}
+}}
 </style>
-
 </head>
-
 <body>
+<div id="toast" class="toast">收到新的抱抱啦 🧸</div>
+<main>
+    <header class="hero">
+        <div class="bear">🧸</div>
+        <div>
+            <h1>抱抱小熊</h1>
+            <p class="subtitle">每一个抱抱，都有好好抵达。</p>
+        </div>
+    </header>
 
-<h1>
-    🧸 抱抱记录
-</h1>
+    <section class="panel">
+        <div class="auth">
+            <input id="token" type="password" placeholder="输入 MCP_TOKEN" autocomplete="off">
+            <button id="loadBtn" onclick="startReading()">查看抱抱</button>
+        </div>
+        <div class="status-line">
+            <span id="serverDot" class="dot"></span>
+            <span id="statusText">输入密钥后查看，页面会每 3 秒自动刷新</span>
+        </div>
+    </section>
 
-<p>
-    版本：{BUILD_VERSION}
-</p>
+    <section id="livePanel" class="panel live hidden">
+        <div id="liveIcon" class="live-icon">🌙</div>
+        <h2 id="liveTitle" class="live-title">小熊正在等你</h2>
+        <p id="liveNote" class="live-note">目前没有进行中的抱抱</p>
+    </section>
 
-<input
-    id="token"
-    type="password"
-    placeholder="MCP_TOKEN"
-    autocomplete="off"
->
+    <section id="latestPanel" class="panel hidden">
+        <div class="latest-head">
+            <div>
+                <div class="eyebrow">最近一次记录</div>
+                <div id="latestTitle" class="latest-title">—</div>
+            </div>
+            <div id="latestTime" class="time">—</div>
+        </div>
+        <div class="metrics">
+            <div class="metric"><strong id="durationValue">—</strong><span>持续时间</span></div>
+            <div class="metric"><strong id="peakValue">—</strong><span>最大力度</span></div>
+            <div class="metric"><strong id="eventId">—</strong><span>记录编号</span></div>
+        </div>
+        <div class="meter"><i id="strengthBar"></i></div>
+    </section>
 
-<p>
-
-<button onclick="loadData()">
-    读取
-</button>
-
-</p>
-
-<pre id="out">
-尚未读取
-</pre>
+    <h2 id="historyHeading" class="section-title hidden">最近的抱抱</h2>
+    <section id="historyPanel" class="panel hidden">
+        <div id="eventList"></div>
+        <details>
+            <summary>查看原始数据（调试用）</summary>
+            <pre id="rawOut"></pre>
+        </details>
+    </section>
+</main>
 
 <script>
+let timer = null;
+let lastEventId = null;
+let firstSuccessfulLoad = true;
 
-async function loadData() {{
-
-    const headers = {{
-        "X-MCP-Token":
-            token.value
-    }};
-
-    const [
-        currentResponse,
-        historyResponse
-    ] =
-        await Promise.all(
-            [
-                fetch(
-                    "/api/current",
-                    {{
-                        headers
-                    }}
-                ),
-
-                fetch(
-                    "/api/history?limit=20",
-                    {{
-                        headers
-                    }}
-                )
-            ]
-        );
-
-    out.textContent =
-        JSON.stringify(
-            {{
-                current_hug_state:
-                    await currentResponse.json(),
-
-                history:
-                    await historyResponse.json()
-            }},
-            null,
-            2
-        );
+function escapeHtml(value) {{
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 }}
 
+function actionIcon(action) {{
+    return {{
+        tap: "🐾",
+        press: "🤏",
+        hug: "🧸",
+        tight_hug: "💗",
+        long_hug: "🫂",
+        sleep_hug: "🌙"
+    }}[action] || "🧸";
+}}
+
+function formatDuration(seconds) {{
+    const value = Number(seconds || 0);
+    if (value >= 3600) return (value / 3600).toFixed(1) + " 小时";
+    if (value >= 60) return (value / 60).toFixed(1) + " 分钟";
+    return value.toFixed(value < 10 ? 1 : 0) + " 秒";
+}}
+
+function displayTime(event) {{
+    return event.ended_at_text || event.received_at_text || event.created_at || "时间未知";
+}}
+
+function shortTime(event) {{
+    const text = displayTime(event);
+    return text.length >= 19 ? text.slice(5, 16) : text;
+}}
+
+function relativeTime(event) {{
+    const raw = event.ended_at || event.received_at || event.created_at;
+    if (!raw) return "";
+    const diff = Date.now() - new Date(raw).getTime();
+    if (diff < 0 || !Number.isFinite(diff)) return "";
+    if (diff < 60000) return "刚刚";
+    if (diff < 3600000) return Math.floor(diff / 60000) + " 分钟前";
+    if (diff < 86400000) return Math.floor(diff / 3600000) + " 小时前";
+    return Math.floor(diff / 86400000) + " 天前";
+}}
+
+function showToast() {{
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 3200);
+    if (navigator.vibrate) navigator.vibrate([90, 50, 90]);
+}}
+
+function setConnected(ok, message) {{
+    serverDot.className = "dot " + (ok ? "ok" : "bad");
+    statusText.textContent = message;
+}}
+
+function renderCurrent(current) {{
+    const active = current.is_hugging_now && current.active_hugs && current.active_hugs.length;
+    livePanel.classList.remove("hidden");
+    if (active) {{
+        const hug = current.active_hugs[0];
+        liveIcon.textContent = "💗";
+        liveIcon.classList.add("pulse");
+        liveTitle.textContent = "正在抱抱中";
+        liveNote.textContent = "小熊已经感觉到你啦" + (hug.peak_max ? " · 当前峰值 " + hug.peak_max : "");
+    }} else {{
+        liveIcon.textContent = "🌙";
+        liveIcon.classList.remove("pulse");
+        liveTitle.textContent = "小熊正在等你";
+        liveNote.textContent = "目前没有进行中的抱抱";
+    }}
+}}
+
+function renderHistory(events) {{
+    latestPanel.classList.remove("hidden");
+    historyHeading.classList.remove("hidden");
+    historyPanel.classList.remove("hidden");
+
+    if (!events.length) {{
+        latestTitle.textContent = "还没有收到记录";
+        latestTime.textContent = "抱一下试试看";
+        durationValue.textContent = "—";
+        peakValue.textContent = "—";
+        eventId.textContent = "—";
+        strengthBar.style.width = "0";
+        eventList.innerHTML = '<div class="empty">这里会出现小熊收到的抱抱 🧸</div>';
+        return;
+    }}
+
+    const latest = events[0];
+    latestTitle.textContent = latest.action_zh || "抱抱";
+    latestTime.textContent = relativeTime(latest) || shortTime(latest);
+    durationValue.textContent = formatDuration(latest.duration_s);
+    peakValue.textContent = latest.peak ?? "—";
+    eventId.textContent = "#" + latest.id;
+    strengthBar.style.width = Math.min(100, Math.max(0, Number(latest.peak || 0) / 4095 * 100)) + "%";
+
+    if (!firstSuccessfulLoad && lastEventId !== null && latest.id !== lastEventId) {{
+        showToast();
+    }}
+    lastEventId = latest.id;
+
+    eventList.innerHTML = events.slice(0, 10).map(event =>
+        '<article class="event">' +
+            '<div class="event-icon">' + actionIcon(event.action) + '</div>' +
+            '<div><div class="event-name">' + escapeHtml(event.action_zh || event.action || "抱抱") + '</div>' +
+            '<div class="event-meta">' + escapeHtml(formatDuration(event.duration_s)) +
+            ' · 力度 ' + escapeHtml(event.peak ?? "—") + '</div></div>' +
+            '<div class="event-time">' + escapeHtml(shortTime(event)) + '<br>#' + escapeHtml(event.id) + '</div>' +
+        '</article>'
+    ).join("");
+}}
+
+async function loadData() {{
+    const secret = token.value.trim();
+    if (!secret) {{
+        setConnected(false, "请先输入 MCP_TOKEN");
+        return;
+    }}
+
+    const headers = {{ "X-MCP-Token": secret }};
+    try {{
+        const responses = await Promise.all([
+            fetch("/api/current", {{ headers, cache: "no-store" }}),
+            fetch("/api/history?limit=20", {{ headers, cache: "no-store" }})
+        ]);
+        if (!responses[0].ok || !responses[1].ok) {{
+            throw new Error(responses[0].status === 401 || responses[1].status === 401
+                ? "密钥不正确，请重新输入"
+                : "服务器暂时没有返回记录");
+        }}
+        const current = await responses[0].json();
+        const history = await responses[1].json();
+        renderCurrent(current);
+        renderHistory(history.events || []);
+        rawOut.textContent = JSON.stringify({{ current_hug_state: current, history: history }}, null, 2);
+        setConnected(true, "服务器连接正常 · " + new Date().toLocaleTimeString("zh-CN", {{ hour: "2-digit", minute: "2-digit", second: "2-digit" }}) + " 已刷新");
+        firstSuccessfulLoad = false;
+    }} catch (error) {{
+        setConnected(false, error.message || "读取失败，请稍后重试");
+    }}
+}}
+
+function startReading() {{
+    loadData();
+    if (timer) clearInterval(timer);
+    timer = setInterval(loadData, 3000);
+    loadBtn.textContent = "正在自动刷新";
+    loadBtn.disabled = true;
+}}
+
+token.addEventListener("keydown", event => {{
+    if (event.key === "Enter") startReading();
+}});
 </script>
-
 </body>
-
 </html>
         """
     )
